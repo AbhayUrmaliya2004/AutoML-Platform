@@ -1,51 +1,46 @@
 import pandas as pd
+from sklearn.preprocessing import StandardScaler, MinMaxScaler, OneHotEncoder
+from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
 from sklearn.impute import SimpleImputer
-from sklearn.compose import ColumnTransformer
-from sklearn.preprocessing import StandardScaler, OneHotEncoder
 
-def create_preprocessor(numerical_cols, categorical_cols):
-    """
-    Creates a ColumnTransformer pipeline.
-    """
-    # Numerical: Impute -> Scale
+
+def create_preprocessor(num_cols, cat_cols, scaling="Standard", imputation="Median"):
+    # Numerical pipeline
+    if scaling == "Standard":
+        scaler = StandardScaler()
+    elif scaling == "MinMax":
+        scaler = MinMaxScaler()
+    else:
+        scaler = "passthrough"
+
+
     num_pipeline = Pipeline([
-        ('imputer', SimpleImputer(strategy='median')),
-        ('scaler', StandardScaler())
+        ("imputer", SimpleImputer(strategy=imputation.lower())),
+        ("scaler", scaler)
     ])
 
-    # Categorical: Impute -> OneHotEncode
+    # Categorical pipeline
     cat_pipeline = Pipeline([
-        ('imputer', SimpleImputer(strategy='most_frequent')),
-        ('encoder', OneHotEncoder(handle_unknown='ignore', sparse_output=False))
+        ("imputer", SimpleImputer(strategy="most_frequent")),
+        ("encoder", OneHotEncoder(handle_unknown="ignore", sparse_output=False))
+    ])
+    
+
+    preprocessor = ColumnTransformer([
+        ("num", num_pipeline, num_cols),
+        ("cat", cat_pipeline, cat_cols)
     ])
 
-
-    # Combine
-    preprocessor = ColumnTransformer([
-        ('num', num_pipeline, numerical_cols),
-        ('cat', cat_pipeline, categorical_cols)
-    ], verbose_feature_names_out=False)
-    
     return preprocessor
 
 
-################### This will clean the data with the names
-def process_data(df, numerical_cols, categorical_cols):
-    """
-    Applies the preprocessor and returns a clean DataFrame with column names.
-    """
-    preprocessor = create_preprocessor(numerical_cols, categorical_cols)
-    
-    # Fit and Transform
-    X_processed_array = preprocessor.fit_transform(df)
-    
-    # Attempt to recover column names for better visibility
-    try:
-        feature_names = preprocessor.get_feature_names_out()
-        X_processed = pd.DataFrame(X_processed_array, columns=feature_names)
-    except:
-        X_processed = pd.DataFrame(X_processed_array)
-        
-    return X_processed
 
+def process_data(df, preprocessor, fit=True):
+    X = preprocessor.fit_transform(df) if fit else preprocessor.transform(df)
+
+    try:
+        cols = preprocessor.get_feature_names_out()
+        return pd.DataFrame(X, columns=cols, index=df.index)
+    except:
+        return pd.DataFrame(X, index=df.index)
