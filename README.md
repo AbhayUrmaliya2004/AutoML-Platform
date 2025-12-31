@@ -31,6 +31,7 @@
     * **Download Assets:** One-click download for trained `.pkl` models **AND** the fitted `preprocessor.pkl` (essential for real-world usage).
 
 ---
+![Uploading image.png…]()
 
 ## 🛠️ Tech Stack
 
